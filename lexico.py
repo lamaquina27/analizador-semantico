@@ -87,10 +87,11 @@ class Scanner:
 
     def obtener_linea_actual(self):
         if self.linea_actual < len(self.lineas_totales):
-            self.linea_actual +=1
-            return self.lineas_totales[self.linea_actual]
-        else:
-            return ""
+            linea=self.lineas_totales[self.linea_actual]
+            self.linea_actual += 1
+            return linea
+        return ""  # Retorna una cadena vacía si el índice es inválido
+
         
 
 palabras_reservadas ={"else":"else","int":"int","str":"str","while":"while","in":"in","for":"for","None":"None","class" : "class","def":'def',"True":'true',"False":"false","bool":'bool',"__init__":'__init',"self":"self","print":"print","return":"return","object":"object","if":"if"}
