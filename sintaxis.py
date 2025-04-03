@@ -54,6 +54,14 @@ class Parser():
             self.comprobador("tk_igualdad")  
         elif operador == "!=":
             self.comprobador("tk_diferencia")
+        elif operador == ">":
+            self.comprobador("tk_mayorque")
+        elif operador == "<":
+            self.comprobador("tk_menorque")
+        elif operador == ">=":
+            self.comprobador("tk_mayorigual")
+        elif operador == "<=":
+            self.comprobador("tk_menorigual")
         else:
             raise SyntaxError(f"Operador no válido en la condición: {operador}")
         derecha = self.token_actual.valor
@@ -172,7 +180,12 @@ class Parser():
             self.indentacion_esperada -= 1  
 
             # ✅ Verificar `else` solo si está al mismo nivel que `if`
-            if self.nivel_indentacion == self.indentacion_esperada and self.token_actual.tipo == "else":
+            if self.token_actual.tipo == "else":
+                if self.nivel_indentacion != self.indentacion_esperada:
+                    print(f">>> Error de indentación (línea: {self.token_actual.fila}): "
+                        f"`else` debe estar al mismo nivel de indentación que su `if`.")
+                    sys.exit(1)
+
                 self.comprobador("else")
                 self.comprobador("tk_dos_puntos")
 
@@ -211,9 +224,26 @@ class Parser():
             self.comprobador("def")
             self.comprobador("id")
             self.comprobador("tk_par_izq")
-            self.parametros()
+            
+            if self.token_actual.tipo != 'tk_par_der':
+                self.parametros()
+            else:
+                self.comprobador("tk_par_der")
             self.comprobador("tk_dos_puntos")
             self.indentacion_esperada += 1 # Incrementa el nivel de indentación esperado para el bloque def
+            self.token_actual = self.scanner.siguiente_token()
+            if self.token_actual.fila != self.ultima_fila:
+                self.linea_entera = self.scanner.obtener_linea_actual()
+                self.nivel_indentacion = self.verificar_indentacion(self.linea_entera)
+
+                if self.nivel_indentacion < self.indentacion_esperada:
+                    print(f">>> Error de indentación (línea: {self.token_actual.fila}): "
+                        f"Se esperaba al menos {self.indentacion_esperada * 4} espacios, pero se encontraron {self.nivel_indentacion * 4}.")
+                    sys.exit(1)
+
+                self.ultima_fila = self.token_actual.fila
+
+            # Luego procesa como antes
             while self.token_actual.tipo != "EOF":
                 if self.token_actual.fila != self.ultima_fila:
                     self.linea_entera = self.scanner.obtener_linea_actual()
