@@ -46,8 +46,12 @@ class Parser():
         return nivel_indentado
 
     def condicion(self):
-        izquierda = self.token_actual.valor
-        self.comprobador("id")
+        if self.token_actual.tipo in ("id", "tk_entero"):
+            izquierda = self.token_actual.valor
+            self.comprobador(self.token_actual.tipo)
+        else:
+            print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: se esperaba variable o número.")
+            sys.exit(1)
 
         operador = self.token_actual.valor
         if operador == "==":
@@ -63,16 +67,37 @@ class Parser():
         elif operador == "<=":
             self.comprobador("tk_menorigual")
         else:
-            raise SyntaxError(f"Operador no válido en la condición: {operador}")
-        derecha = self.token_actual.valor
-        self.comprobador("id")
+            print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: operador no válido en la condición: {operador}")
+            sys.exit(1)
 
-        condicion_str = f"{izquierda} {operador} {derecha}"
-        return condicion_str
+        if self.token_actual.tipo in ("id", "tk_entero"):
+            derecha = self.token_actual.valor
+            self.comprobador(self.token_actual.tipo)
+        else:
+            print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: se esperaba variable o número.")
+            sys.exit(1)
+
     def parametros(self):
         parametros = []
-        while True:  # Bucle principal para analizar múltiples parámetros
-            if self.token_actual.tipo == "tk_llave_izq":  # Si es un array de enteros
+
+        while True:
+            if self.token_actual.tipo == "id":
+                nombre = self.token_actual.valor
+                self.comprobador("id")
+
+                if self.token_actual.tipo == "tk_dos_puntos":
+                    self.comprobador("tk_dos_puntos")
+                    if self.token_actual.tipo == "int":
+                        self.comprobador("int")
+                    elif self.token_actual.tipo == "tk_llave_izq":
+                        self.comprobador("tk_llave_izq")
+                        self.comprobador("int")
+                        self.comprobador("tk_llave_der")
+                    else:
+                        self.error_parametro()
+                parametros.append(nombre)
+
+            elif self.token_actual.tipo == "tk_llave_izq":
                 self.comprobador("tk_llave_izq")
                 while self.token_actual.tipo == "tk_entero":
                     parametros.append(self.token_actual.valor)
@@ -81,65 +106,28 @@ class Parser():
                         self.comprobador("tk_coma")
                     else:
                         break
-                self.comprobador("tk_llave_der")  # Cierra el arreglo
+                self.comprobador("tk_llave_der")
 
-                # Verifica si hay más parámetros después del arreglo
-                if self.token_actual.tipo == "tk_coma":
-                    self.comprobador("tk_coma")
-                    continue  # Continúa analizando más parámetros
-                elif self.token_actual.tipo == "tk_par_der":
-                    self.comprobador("tk_par_der")
-                    break  # Fin de los parámetros
-                else:
-                    print(
-                        f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: "
-                        f"se encontró \"{self.token_actual.valor}\"; se esperaba ',' o ')'."
-                    )
+            else:
+                break
 
-            else:  # Si no es un arreglo, analiza parámetros simples
-                while self.token_actual.tipo == "id" or self.token_actual.tipo == "tk_entero":
-
-                    nombre_parametro = self.token_actual.valor
-
-                    if self.token_actual.tipo == "id":
-                        self.comprobador("id")
-                    elif self.token_actual.tipo == "tk_entero":
-                        
-                        self.comprobador("tk_entero")
-                    
-                    if self.token_actual.tipo == "tk_dos_puntos":
-                        
-                        self.comprobador("tk_dos_puntos")
-                        
-                        if self.token_actual.tipo == "int":
-                            self.comprobador("int")
-                        elif self.token_actual.tipo == "tk_llave_izq":
-                            self.comprobador("tk_llave_izq")
-                            self.comprobador("int")
-                            self.comprobador("tk_llave_der")
-
-                    parametros.append(nombre_parametro)
-
-                    # Verifica si hay más parámetros
-                    if self.token_actual.tipo == "tk_coma":
-                        self.comprobador("tk_coma")
-                        continue  # Continúa analizando más parámetros
-                    elif self.token_actual.tipo == "tk_par_der":
-                        self.comprobador("tk_par_der")
-                        break  # Fin de los parámetros
-                    else:
-                        raise SyntaxError(
-                            f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: "
-                            f"se encontró \"{self.token_actual.valor}\"; se esperaba ',' o ')'."
-                        )
-                        sys.exit(1)
-            break  # Sale del bucle principal después de procesar parámetros simples
+            if self.token_actual.tipo == "tk_coma":
+                self.comprobador("tk_coma")
+            elif self.token_actual.tipo == "tk_par_der":
+                self.comprobador("tk_par_der")
+                break
+            else:
+                self.error_parametro()
 
         return parametros
+
+    def error_parametro(self):
+        print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico en parámetro.")
+        sys.exit(1)
+
     def argumentos_print(self):
         while True:
-            # Analiza el primer argumento (cadena, variable, número, etc.)
-            print(self.token_actual.valor)
+            
             if self.token_actual.tipo == "tk_comillas":
                 self.comprobador("tk_comillas")
                 self.comprobador("tk_cadena")
@@ -161,109 +149,144 @@ class Parser():
             else:
                 break            
     def expresion(self):
-        if self.token_actual.tipo == "if": 
-            self.comprobador("if")
-            if self.token_actual.tipo == "id":
-                self.comprobador("id")
-                self.comprobador("tk_par_izq")
-                self.parametros()
+        token_tipo = self.token_actual.tipo
+        if token_tipo == "if":
+            self.analizar_if()
+        elif token_tipo == "for":
+            self.analizar_for()
+        elif token_tipo == "while":
+            self.analizar_while()
+        elif token_tipo == "def":
+            self.analizar_def()
+        elif token_tipo == "print":
+            self.analizar_print()
+        elif token_tipo == "id":
+            if self.peek_token().tipo == "tk_par_izq":
+                self.analizar_llamada_funcion()
+            elif self.peek_token().tipo == "tk_asig":
+                self.analizar_asignacion()
             else:
-                self.condicion()
+                print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: '{self.token_actual.valor}' no es una instrucción válida.")
+                sys.exit(1)
+        
+    def peek_token(self):
+        if self.scanner.tokens:
+            return self.scanner.tokens[0]
+        return lexico.Token("EOF", "", -1, -1)
+
+    def analizar_if(self):
+        self.comprobador("if")
+        self.condicion()
+        self.comprobador("tk_dos_puntos")
+
+        self.indentacion_esperada += 1
+
+        # ✅ Avanzamos solo si cambia de línea (como ya haces en parser)
+        self.token_actual = self.scanner.siguiente_token()
+
+        self.verificar()
+        self.indentacion_esperada -= 1
+
+        # ✅ Si viene un else, se debe validar que esté al mismo nivel de indentación
+        if self.token_actual.tipo == "else":
+            if self.nivel_indentacion != self.indentacion_esperada:
+                print(f">>> Error de indentación (línea: {self.token_actual.fila}): else mal indentado.")
+                sys.exit(1)
+
+            self.comprobador("else")
             self.comprobador("tk_dos_puntos")
-
-            # ✅ Incrementamos la indentación esperada
-            self.indentacion_esperada += 1  
+            self.indentacion_esperada += 1
             self.token_actual = self.scanner.siguiente_token()
-
             self.verificar()
-            # ✅ Reducimos la indentación esperada **antes de evaluar `else`**
-            self.indentacion_esperada -= 1  
+            self.indentacion_esperada -= 1
 
-            # ✅ Verificar `else` solo si está al mismo nivel que `if`
-            if self.token_actual.tipo == "else":
-                if self.nivel_indentacion != self.indentacion_esperada:
-                    print(f">>> Error de indentación (línea: {self.token_actual.fila}): "
-                        f"`else` debe estar al mismo nivel de indentación que su `if`.")
-                    sys.exit(1)
 
-                self.comprobador("else")
-                self.comprobador("tk_dos_puntos")
+    def analizar_for(self):
+        self.comprobador("for")
+        self.comprobador("id")
+        self.comprobador("in")
+        self.comprobador("id")
+        self.comprobador("tk_dos_puntos")
+        self.indentacion_esperada += 1
+        self.token_actual = self.scanner.siguiente_token()
+        self.verificar()
+        self.indentacion_esperada -= 1
 
-                # ✅ Volvemos a incrementar la indentación para el bloque `else`
-                self.indentacion_esperada += 1  
+    def analizar_while(self):
+        self.comprobador("while")
+        
+        self.condicion()
+        
+        self.comprobador("tk_dos_puntos")
+        self.indentacion_esperada += 1
+        self.token_actual = self.scanner.siguiente_token()
+        self.verificar()
+        self.indentacion_esperada -= 1
 
-                self.token_actual = self.scanner.siguiente_token()
-                self.verificar()
-                self.indentacion_esperada -= 1  # Reducimos indentación después de `else`
-
-        elif self.token_actual.tipo == "for":
-            self.comprobador("for")
-            self.comprobador("id")
-            self.comprobador("in")
-            self.comprobador("id")
-            self.comprobador("tk_dos_puntos")
-            self.indentacion_esperada += 1  # Incrementa el nivel de indentación esperado
-            self.token_actual = self.scanner.siguiente_token()
-
-            self.verificar()  # Procesa el bloque interno
-            self.indentacion_esperada -= 1  # Reduce el nivel de indentación esperado
-
-        elif self.token_actual.tipo == "while":
-            self.comprobador("while")
-            self.comprobador("tk_par_izq")
-            self.condicion()
+    def analizar_def(self):
+        self.comprobador("def")
+        self.comprobador("id")
+        self.comprobador("tk_par_izq")
+        if self.token_actual.tipo != 'tk_par_der':
+            self.parametros()
+        else:
             self.comprobador("tk_par_der")
-            self.comprobador("tk_dos_puntos")
-            self.indentacion_esperada += 1  # Incrementa el nivel de indentación esperado
-            self.token_actual = self.scanner.siguiente_token()
+        self.comprobador("tk_dos_puntos")
+        self.indentacion_esperada += 1
+        self.token_actual = self.scanner.siguiente_token()
+        self.verificar()
+        self.indentacion_esperada -= 1
+    def analizar_llamada_funcion(self):
+        self.comprobador("id")
+        self.comprobador("tk_par_izq")
 
-            self.verificar()  # Procesa el bloque interno
-            self.indentacion_esperada -= 1  # Reduce el nivel de indentación esperado
-
-        elif self.token_actual.tipo == "def":
-            self.comprobador("def")
-            self.comprobador("id")
-            self.comprobador("tk_par_izq")
-            
-            if self.token_actual.tipo != 'tk_par_der':
-                self.parametros()
+        while self.token_actual.tipo not in ("tk_par_der", "EOF"):
+            if self.token_actual.tipo in ("id", "tk_entero", "tk_cadena"):
+                self.comprobador(self.token_actual.tipo)
+            elif self.token_actual.tipo == "tk_llave_izq":
+                self.comprobador("tk_llave_izq")
+                while self.token_actual.tipo == "tk_entero":
+                    self.comprobador("tk_entero")
+                    if self.token_actual.tipo == "tk_coma":
+                        self.comprobador("tk_coma")
+                    else:
+                        break
+                self.comprobador("tk_llave_der")
             else:
-                self.comprobador("tk_par_der")
-            self.comprobador("tk_dos_puntos")
-            self.indentacion_esperada += 1 # Incrementa el nivel de indentación esperado para el bloque def
-            self.token_actual = self.scanner.siguiente_token()
-            if self.token_actual.fila != self.ultima_fila:
-                self.linea_entera = self.scanner.obtener_linea_actual()
-                self.nivel_indentacion = self.verificar_indentacion(self.linea_entera)
+                print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error: argumento inválido.")
+                sys.exit(1)
 
-                if self.nivel_indentacion < self.indentacion_esperada:
-                    print(f">>> Error de indentación (línea: {self.token_actual.fila}): "
-                        f"Se esperaba al menos {self.indentacion_esperada * 4} espacios, pero se encontraron {self.nivel_indentacion * 4}.")
-                    sys.exit(1)
+            if self.token_actual.tipo == "tk_coma":
+                self.comprobador("tk_coma")
+            else:
+                break
 
-                self.ultima_fila = self.token_actual.fila
+        self.comprobador("tk_par_der")
 
-            # Luego procesa como antes
-            while self.token_actual.tipo != "EOF":
-                if self.token_actual.fila != self.ultima_fila:
-                    self.linea_entera = self.scanner.obtener_linea_actual()
-                    self.nivel_indentacion = self.verificar_indentacion(self.linea_entera)
+    def analizar_print(self):
+        self.comprobador("print")
+        self.comprobador("tk_par_izq")
+        self.argumentos_print()
+        self.comprobador("tk_par_der")
+    def analizar_asignacion(self):
+        self.comprobador("id")
+        self.comprobador("tk_asig")
 
-                    if self.nivel_indentacion < self.indentacion_esperada:
-                        break  
+        # Valor de la asignación: puede ser id, entero, cadena o llamada a función
+        if self.token_actual.tipo in ("tk_entero", "id", "tk_comillas"):
+            if self.token_actual.tipo == "tk_comillas":
+                self.comprobador("tk_comillas")
+                self.comprobador("tk_cadena")
+                self.comprobador("tk_comillas")
+            else:
+                self.comprobador(self.token_actual.tipo)
+        elif self.token_actual.tipo == "id" and self.peek_token().tipo == "tk_par_izq":
+            self.analizar_llamada_funcion()
+        else:
+            print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: valor de asignación inválido.")
+            sys.exit(1)
 
-                    self.ultima_fila = self.token_actual.fila  
-
-                self.expresion()
-                self.token_actual = self.scanner.siguiente_token()
-            self.indentacion_esperada -= 1  # Reduce el nivel de indentación esperado después del bloque def
-
-        elif self.token_actual.tipo == "print":  # Manejo de la función print
-            self.comprobador("print")
-            self.comprobador("tk_par_izq")  # Verifica el paréntesis de apertura
-            self.argumentos_print()  # Analiza los argumentos dentro del print
-            self.comprobador("tk_par_der")  # Verifica el paréntesis de cierre
-            
+                
     
 
     def parser(self):
@@ -279,15 +302,15 @@ class Parser():
                           f"Se esperaba al menos {self.indentacion_esperada * 4} espacios, pero se encontraron {self.nivel_indentacion * 4}.")
                     sys.exit(1)
 
-                self.ultima_fila = self.token_actual.fila  
-
+                self.ultima_fila = self.token_actual.fila 
+            
             # ✅ Asegurar que los bloques internos se procesan con la indentación correcta
             if self.nivel_indentacion >= self.indentacion_esperada:
-                self.expresion()  
+                self.expresion() 
+                self.token_actual = self.scanner.siguiente_token()
             else:
                 return 
     def verificar(self):
-        # 🚨 Agregamos un indicador para verificar si hay al menos una línea correcta
         linea_valida_en_bloque = False  
 
         while self.token_actual.tipo != "EOF":
@@ -295,10 +318,12 @@ class Parser():
                 self.linea_entera = self.scanner.obtener_linea_actual()
                 self.nivel_indentacion = self.verificar_indentacion(self.linea_entera)
 
-                if self.nivel_indentacion == self.indentacion_esperada:
-                    linea_valida_en_bloque = True  # ✅ Se encontró al menos una línea con la indentación correcta
-                
-                # 🚨 Si encontramos una línea con indentación incorrecta, rompemos el bucle
+                # 🔥 Verifica que el else mal indentado no se cuele fuera de su bloque
+                if self.token_actual.tipo == "else" and self.nivel_indentacion != self.indentacion_esperada:
+                    print(f">>> Error de indentación (línea: {self.token_actual.fila}): else mal indentado.")
+                    sys.exit(1)
+
+                # 🚨 Si la indentación es menor, salimos del bloque
                 if self.nivel_indentacion < self.indentacion_esperada:
                     break  
 
@@ -306,10 +331,9 @@ class Parser():
 
             self.expresion()
             self.token_actual = self.scanner.siguiente_token()
-        # 🔥 Avanzamos el token después de procesar `expresion()`
-        if self.token_actual.tipo != "EOF":
-            self.token_actual = self.scanner.siguiente_token()
-        # 🚨 Validar si **ninguna** línea dentro del bloque `if` tenía la indentación correcta
+
+            linea_valida_en_bloque = True
+
         if not linea_valida_en_bloque:
             print(f">>> Error de indentación (línea: {self.token_actual.fila}): "
                 f"Ninguna línea dentro del bloque tiene la indentación esperada de {self.indentacion_esperada * 4} espacios.")
