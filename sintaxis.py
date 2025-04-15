@@ -160,15 +160,39 @@ class Parser():
             self.analizar_def()
         elif token_tipo == "print":
             self.analizar_print()
+        
         elif token_tipo == "id":
             if self.peek_token().tipo == "tk_par_izq":
                 self.analizar_llamada_funcion()
             elif self.peek_token().tipo == "tk_asig":
                 self.analizar_asignacion()
+            
             else:
                 print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: '{self.token_actual.valor}' no es una instrucción válida.")
                 sys.exit(1)
-        
+    def analizar_operacion(self):
+        self.operacion()
+    def operacion(self):
+        self.termino()
+        while self.token_actual.tipo in ("tk_suma", "tk_menos"):
+            self.comprobador(self.token_actual.tipo)
+            self.termino()
+    def termino(self):
+        self.factor()
+        while self.token_actual.tipo in ("tk_multiplicacion", "tk_division"):
+            self.comprobador(self.token_actual.tipo)
+            self.factor()
+    def factor(self):
+        if self.token_actual.tipo == "tk_par_izq":
+            self.comprobador("tk_par_izq")
+            self.operacion()
+            self.comprobador("tk_par_der")
+        elif self.token_actual.tipo in ("tk_entero", "id"):
+            self.comprobador(self.token_actual.tipo)
+        else:
+            print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error: se esperaba número, variable o paréntesis.")
+            sys.exit(1)
+
     def peek_token(self):
         if self.scanner.tokens:
             return self.scanner.tokens[0]
@@ -273,13 +297,14 @@ class Parser():
         self.comprobador("tk_asig")
 
         # Valor de la asignación: puede ser id, entero, cadena o llamada a función
-        if self.token_actual.tipo in ("tk_entero", "id", "tk_comillas"):
+        if self.token_actual.tipo in ("tk_entero", "id", "tk_comillas",'tk_par_izq'):
             if self.token_actual.tipo == "tk_comillas":
                 self.comprobador("tk_comillas")
                 self.comprobador("tk_cadena")
                 self.comprobador("tk_comillas")
             else:
-                self.comprobador(self.token_actual.tipo)
+                
+                self.analizar_operacion()
         elif self.token_actual.tipo == "id" and self.peek_token().tipo == "tk_par_izq":
             self.analizar_llamada_funcion()
         else:

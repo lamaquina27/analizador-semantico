@@ -96,6 +96,6 @@ class Scanner:
 
 palabras_reservadas ={"else":"else","int":"int","str":"str","while":"while","in":"in","for":"for","None":"None","class" : "class","def":'def',"True":'true',"False":"false","bool":'bool',"__init__":'__init',"self":"self","print":"print","return":"return","object":"object","if":"if"}
 palabras_reservadas_key = palabras_reservadas.keys()
-simbolos={">=":"tk_mayorigual","<=":"tk_menorigual",">":"tk_mayorque","<":"tk_menorque","*":"tk_multiplicacion","-":"tk_menos","+":"tk_suma",",":"tk_coma","[":"tk_llave_izq","]":"tk_llave_der",":":"tk_dos_puntos","(":"tk_par_izq",")":"tk_par_der",".":"tk_punto","=":"tk_asig","->":"tk_ejecuta","==":"tk_igualdad","!=":"tk_diferencia"}
+simbolos={'/':'tk_division',">=":"tk_mayorigual","<=":"tk_menorigual",">":"tk_mayorque","<":"tk_menorque","*":"tk_multiplicacion","-":"tk_menos","+":"tk_suma",",":"tk_coma","[":"tk_llave_izq","]":"tk_llave_der",":":"tk_dos_puntos","(":"tk_par_izq",")":"tk_par_der",".":"tk_punto","=":"tk_asig","->":"tk_ejecuta","==":"tk_igualdad","!=":"tk_diferencia"}
 simbolos_keys=simbolos.keys()
 simbolos_invertidos = {v: k for k, v in simbolos.items()}

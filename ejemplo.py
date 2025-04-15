@@ -1,3 +1,1 @@
-if x == 1:
-    nombre = "Carlos"
-    resultado = suma(5, 3)
+x = (a + b)* 3
