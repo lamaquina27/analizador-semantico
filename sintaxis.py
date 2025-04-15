@@ -167,9 +167,10 @@ class Parser():
             elif self.peek_token().tipo == "tk_asig":
                 self.analizar_asignacion()
             
-            else:
+            """else:
+                print(self.token_actual.tipo)
                 print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: '{self.token_actual.valor}' no es una instrucción válida.")
-                sys.exit(1)
+                sys.exit(1)"""
     def analizar_operacion(self):
         self.operacion()
     def operacion(self):
@@ -308,6 +309,7 @@ class Parser():
         elif self.token_actual.tipo == "id" and self.peek_token().tipo == "tk_par_izq":
             self.analizar_llamada_funcion()
         else:
+            
             print(f"<{self.token_actual.fila},{self.token_actual.columna}> Error sintáctico: valor de asignación inválido.")
             sys.exit(1)
 
